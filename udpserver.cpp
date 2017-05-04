@@ -22,22 +22,22 @@ UdpServer::UdpServer(QObject *parent) :
     QObject(parent)
 {
     mUdpSocket = new QUdpSocket(this);
-    mSerialPort = new SerialPort(this);
+    mSerialPort = new QSerialPort(this);
     mPacketInterface = new PacketInterface(this);
     mTimer = new QTimer(this);
     mTimer->setInterval(10);
     mTimer->start();
 
-    mPortPath = "/dev/ttyO2";
-    mUdpPort = 27800;
+    mPortPath = "COM3";
+    mUdpPort = 10000;
     mBaudrate = 115200;
     mReconnectTimer = 0;
 
     connect(mUdpSocket, SIGNAL(readyRead()),
             this, SLOT(readPendingDatagrams()));
-    connect(mSerialPort, SIGNAL(serial_port_error(int)),
-            this, SLOT(serialPortError(int)));
-    connect(mSerialPort, SIGNAL(serial_data_available()),
+    connect(mSerialPort, SIGNAL(errorOccurred(QSerialPort::SerialPortError)),
+            this, SLOT(serialPortError(QSerialPort::SerialPortError)));
+    connect(mSerialPort, SIGNAL(readyRead()),
             this, SLOT(serialDataAvilable()));
     connect(mPacketInterface, SIGNAL(packetReceived(QByteArray)),
             this, SLOT(processPacket(QByteArray)));
@@ -46,18 +46,35 @@ UdpServer::UdpServer(QObject *parent) :
     connect(mTimer, SIGNAL(timeout()), this, SLOT(timerSlot()));
 }
 
+bool UdpServer::openSerialWithDefaults(void)
+{
+    // port settings:
+    mSerialPort->setPortName(mPortPath );
+    mSerialPort->setBaudRate((qint32)mBaudrate );
+    mSerialPort->setDataBits(QSerialPort::DataBits::Data8 );
+    mSerialPort->setParity(QSerialPort::Parity::NoParity );
+    mSerialPort->setStopBits(QSerialPort::StopBits::OneStop );
+    mSerialPort->setFlowControl(QSerialPort::FlowControl::NoFlowControl );
+
+    if ( mSerialPort->open(QIODevice::ReadOnly) == false ) {
+        qWarning() << "Unable to open serial port with default settings";
+        return false;
+    }
+    return true;
+}
+
 bool UdpServer::startServer(const QString &serialPort, int baudrate, quint16 udpPort)
 {
     mPortPath = serialPort;
     mUdpPort = udpPort;
     mBaudrate = baudrate;
 
-    if (mSerialPort->openPort(mPortPath, mBaudrate) < 0) {
-        qWarning() << "Unable to open serial port.";
+    if ( openSerialWithDefaults() == false )
+    {
         return false;
     }
 
-    return mUdpSocket->bind(QHostAddress::Any, mUdpPort);
+    return mUdpSocket->bind(QHostAddress::LocalHost, mUdpPort);
 }
 
 void UdpServer::readPendingDatagrams()
@@ -98,8 +115,9 @@ void UdpServer::timerSlot()
     if (mReconnectTimer) {
         mReconnectTimer--;
         if (!mReconnectTimer) {
-            if (mSerialPort->openPort(mPortPath, mBaudrate) < 0) {
-                qWarning() << "Unable to open serial port. Retrying...";
+            if ( openSerialWithDefaults() == false )
+            {
+                qWarning() << "Retrying...";
                 mReconnectTimer = 50;
             }
         }
@@ -113,14 +131,12 @@ void UdpServer::processPacket(QByteArray data)
         return;
     }
 
-    mUdpSocket->writeDatagram(data, mLastHostAddress, mUdpPort + 1);
+    mUdpSocket->writeDatagram(data, QHostAddress::LocalHost, mUdpPort );
 }
 
 void UdpServer::packetDataToSend(QByteArray &data)
 {
-    if (mSerialPort->isOpen()) {
-        mSerialPort->writeData(data.data(), data.size());
-    }
+    qWarning() << "Writing to serial is not supported!";
 }
 
 QString UdpServer::getSerialPortPath()

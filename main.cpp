@@ -27,9 +27,9 @@ int main(int argc, char *argv[])
 {
     QCoreApplication a(argc, argv);
     UdpServer server;
-    QString ttyPort = "/dev/ttyACM0";
+    QString ttyPort = "COM3";
     int baudrate = 115200;
-    int udpPort = 27800;
+    int udpPort = 10000;
 
     QStringList args = QCoreApplication::arguments();
 

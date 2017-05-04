@@ -18,10 +18,12 @@
 #ifndef SERIALPORT_H
 #define SERIALPORT_H
 
+#if 0
 #include <QMutex>
 #include <QSize>
 #include <QThread>
 #include <QWaitCondition>
+
 
 class SerialPort : public QThread
 {
@@ -50,16 +52,16 @@ public:
         SerialParity parity = PARITY_NONE);
 
     void closePort();
-    bool setBaudrate(int baudrate);
+
     bool setParity(SerialParity parity);
     bool setStopBits(SerialStopBits stopBits);
     bool setDataBits(SerialDataBits dataBits);
-    bool readByte(char& byte);
+
     int readBytes(char* buffer, int bytes);
-    int readString(QString& string, int length);
+
     QByteArray readAll();
     int writeData(const char* data, int length, bool block = true);
-    bool writeByte(char byte, bool block = true);
+
     bool writeString(const QString& string, bool block = true);
     int bytesAvailable();
     bool isOpen();
@@ -76,6 +78,8 @@ protected:
     void run();
 
 private:
+
+
     QMutex mMutex;
     QWaitCondition mCondition;
     bool mAbort;
@@ -93,5 +97,6 @@ private:
     char* mCaptureBuffer;
     int mCaptureWrite;
 };
+#endif
 
 #endif // SERIALPORT_H

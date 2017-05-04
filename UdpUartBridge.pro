@@ -6,7 +6,7 @@
 
 QT       += core
 QT       += network
-
+QT       += serialport
 QT       -= gui
 
 TARGET = UdpUartBridge
@@ -18,7 +18,6 @@ TEMPLATE = app
 
 SOURCES += main.cpp \
     packetinterface.cpp \
-    serialport.cpp \
     udpserver.cpp
 
 HEADERS += \

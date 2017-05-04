@@ -24,9 +24,7 @@
 #include <unistd.h>  /* UNIX standard function definitions */
 #include <fcntl.h>   /* File control definitions */
 #include <errno.h>   /* Error number definitions */
-#include <termios.h> /* POSIX terminal control definitions */
-#include <linux/serial.h>
-#include <sys/ioctl.h>
+
 #include <iostream>
 
 #include "serialport.h"
@@ -178,103 +176,6 @@ void SerialPort::closePort()
     mMutex.unlock();
 }
 
-bool SerialPort::setBaudrate(int baudrate)
-{
-    if (!mIsOpen) {
-        qCritical() << "Serial port not open.";
-        return false;
-    }
-
-    speed_t baud = 0;
-    switch (baudrate) {
-    case      50: baud =      B50; break;
-    case      75: baud =      B75; break;
-    case     110: baud =     B110; break;
-    case     134: baud =     B134; break;
-    case     150: baud =     B150; break;
-    case     200: baud =     B200; break;
-    case     300: baud =     B300; break;
-    case     600: baud =     B600; break;
-    case    1200: baud =    B1200; break;
-    case    1800: baud =    B1800; break;
-    case    2400: baud =    B2400; break;
-    case    4800: baud =    B4800; break;
-    case    9600: baud =    B9600; break;
-    case   19200: baud =   B19200; break;
-    case   38400: baud =   B38400; break;
-    case   57600: baud =   B57600; break;
-    case  115200: baud =  B115200; break;
-    case  230400: baud =  B230400; break;
-    case  460800: baud =  B460800; break;
-    case  500000: baud =  B500000; break;
-    case  576000: baud =  B576000; break;
-    case  921600: baud =  B921600; break;
-    case 1000000: baud = B1000000; break;
-    case 1152000: baud = B1152000; break;
-    case 1500000: baud = B1500000; break;
-    case 2000000: baud = B2000000; break;
-    case 2500000: baud = B2500000; break;
-    case 3000000: baud = B3000000; break;
-    case 3500000: baud = B3500000; break;
-    case 4000000: baud = B4000000; break;
-    default:      baud = 0; break;
-    }
-
-    struct termios options;
-    if (0 != tcgetattr(mFd, &options)) {
-        qCritical() << "Reading serial port options failed.";
-        return false;
-    }
-
-    serial_struct ser_info;
-
-    if (0 == baud) {
-        if (0 != ioctl(mFd, TIOCGSERIAL, &ser_info)) {
-            qCritical() << "Reading ser_info struct failed. Try a standard baudrate.";
-            return false;
-        }
-
-        ser_info.flags &= ~ASYNC_SPD_MASK;
-        ser_info.flags |= ASYNC_SPD_CUST | ASYNC_LOW_LATENCY;
-        ser_info.custom_divisor = ser_info.baud_base / baudrate;
-        qDebug() << "Baud base: " << ser_info.baud_base;
-
-        cfsetspeed(&options, B38400);
-        if (0 != tcsetattr(mFd, TCSANOW, &options)) {
-            qCritical() << "Writing serial port options failed";
-            return false;
-        }
-
-        if (0 != ioctl(mFd, TIOCSSERIAL, &ser_info)) {
-            qCritical() << "Writing ser_info struct failed";
-            return false;
-        }
-
-        qDebug() << "Custom type baudrate set";
-    } else {
-        cfsetspeed(&options, baud);
-        if (0 != tcsetattr(mFd, TCSANOW, &options)) {
-            qCritical() << "Writing serial port options failed";
-            return false;
-        }
-
-        qDebug() << "Standard type baudrate set";
-
-        if (0 != ioctl(mFd, TIOCGSERIAL, &ser_info)) {
-            qWarning() << "Reading ser_info struct failed.";
-        } else {
-            ser_info.flags &= ~ASYNC_SPD_CUST;
-            ser_info.custom_divisor = 0;
-            qDebug() << "Baud base: " << ser_info.baud_base;
-            if (0 != ioctl(mFd, TIOCSSERIAL, &ser_info)) {
-                qCritical() << "Writing ser_info struct failed";
-            }
-        }
-    }
-
-    mSettings.baudrate = baudrate;
-    return true;
-}
 
 bool SerialPort::setDataBits(SerialDataBits dataBits)
 {
@@ -389,31 +290,6 @@ bool SerialPort::setParity(SerialParity parity)
     return true;
 }
 
-bool SerialPort::readByte(char &byte)
-{
-    if (!mIsOpen) {
-        qCritical() << "Serial port not open.";
-        return false;
-    }
-
-    {
-        QMutexLocker locker(&mMutex);
-        if (mBufferRead == mBufferWrite) {
-            return false;
-        }
-
-        char tmp = mReadBuffer[mBufferRead];
-        mBufferRead++;
-
-        if (mBufferRead == mBufferSize) {
-            mBufferRead = 0;
-        }
-
-        byte = tmp;
-        return true;
-    }
-}
-
 int SerialPort::readBytes(char* buffer, int bytes)
 {
     if (!mIsOpen) {
@@ -437,34 +313,6 @@ int SerialPort::readBytes(char* buffer, int bytes)
     }
 
     return bytes;
-}
-
-int SerialPort::readString(QString& string, int length)
-{
-    if (!mIsOpen) {
-        qCritical() << "Serial port not open.";
-        return -1;
-    }
-
-    string = "";
-
-    QMutexLocker locker(&mMutex);
-    for (int i = 0;i < length;i++) {
-        if (mBufferRead == mBufferWrite) {
-            return i;
-        }
-
-        if ('\0' != mReadBuffer[mBufferRead]) {
-            string.append(mReadBuffer[mBufferRead]);
-        }
-
-        mBufferRead++;
-        if (mBufferRead == mBufferSize) {
-            mBufferRead = 0;
-        }
-    }
-
-    return length;
 }
 
 QByteArray SerialPort::readAll()
@@ -530,20 +378,6 @@ int SerialPort::writeData(const char *data, int length, bool block)
     } else {
         return write(mFd, data, length);
     }
-}
-
-bool SerialPort::writeByte(char byte, bool block)
-{
-    if (!mIsOpen) {
-        qCritical() << "Serial port not open.";
-        return false;
-    }
-
-    if (1 == writeData(&byte, 1, block)) {
-        return true;
-    }
-
-    return false;
 }
 
 int SerialPort::bytesAvailable()
