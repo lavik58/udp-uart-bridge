@@ -39,7 +39,7 @@ signals:
 public slots:
     void readPendingDatagrams();
     void serialDataAvilable();
-    void serialPortError(int e);
+    void serialPortError( QSerialPort::SerialPortError error );
     void timerSlot();
     void processPacket(QByteArray data);
     void packetDataToSend(QByteArray &data);

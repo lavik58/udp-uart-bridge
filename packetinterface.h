@@ -28,6 +28,7 @@ class PacketInterface : public QObject
 public:
     explicit PacketInterface(QObject *parent = 0);
     void processData(QByteArray &data);
+    void bypassRawData(QByteArray &data);
     bool sendPacket(const unsigned char *data, unsigned int len);
     bool sendPacket(QByteArray data);
 

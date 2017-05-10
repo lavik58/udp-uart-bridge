@@ -69,11 +69,14 @@ PacketInterface::PacketInterface(QObject *parent) :
 
     connect(mTimer, SIGNAL(timeout()), this, SLOT(timerSlot()));
 }
-
+void PacketInterface::bypassRawData(QByteArray &data)
+{
+    emit packetReceived(data);
+}
 void PacketInterface::processData(QByteArray &data)
 {
     unsigned char rx_data;
-    const int rx_timeout = 50;
+    const int rx_timeout = 100;
 
     for(int i = 0;i < data.length();i++) {
         rx_data = data[i];

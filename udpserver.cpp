@@ -49,8 +49,8 @@ UdpServer::UdpServer(QObject *parent) :
 bool UdpServer::openSerialWithDefaults(void)
 {
     // port settings:
-    mSerialPort->setPortName(mPortPath );
-    mSerialPort->setBaudRate((qint32)mBaudrate );
+    mSerialPort->setPortName( "COM3" );
+    mSerialPort->setBaudRate( QSerialPort::BaudRate::Baud115200 );
     mSerialPort->setDataBits(QSerialPort::DataBits::Data8 );
     mSerialPort->setParity(QSerialPort::Parity::NoParity );
     mSerialPort->setStopBits(QSerialPort::StopBits::OneStop );
@@ -98,14 +98,18 @@ void UdpServer::serialDataAvilable()
 {
     while (mSerialPort->bytesAvailable() > 0) {
         QByteArray data = mSerialPort->readAll();
-        mPacketInterface->processData(data);
+        //mPacketInterface->processData(data);
+        mPacketInterface->bypassRawData(data);
     }
 }
 
-void UdpServer::serialPortError(int e)
+void UdpServer::serialPortError( QSerialPort::SerialPortError error )
 {
-    qWarning() << "Serial port error: " << e;
-    mReconnectTimer = 50;
+    if ( error != QSerialPort::SerialPortError::NoError )
+    {
+        qWarning() << "Serial port error: " << error;
+        mReconnectTimer = 50;
+    }
 }
 
 void UdpServer::timerSlot()
