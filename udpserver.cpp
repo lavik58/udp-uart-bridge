@@ -98,8 +98,7 @@ void UdpServer::serialDataAvilable()
 {
     while (mSerialPort->bytesAvailable() > 0) {
         QByteArray data = mSerialPort->readAll();
-        //mPacketInterface->processData(data);
-        mPacketInterface->bypassRawData(data);
+        mPacketInterface->forwardRawData(data);
     }
 }
 
