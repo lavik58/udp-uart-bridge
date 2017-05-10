@@ -6,7 +6,7 @@
 
 QT       += core
 QT       += network
-
+QT       += serialport
 QT       -= gui
 
 TARGET = UdpUartBridge
@@ -18,10 +18,20 @@ TEMPLATE = app
 
 SOURCES += main.cpp \
     packetinterface.cpp \
-    serialport.cpp \
-    udpserver.cpp
+    udpserver.cpp \
+    usbport.cpp
 
 HEADERS += \
     packetinterface.h \
     serialport.h \
-    udpserver.h
+    udpserver.h \
+    usbport.h
+
+
+win32: LIBS += -L$$PWD/import/libs/ -llibusb-1.0
+
+INCLUDEPATH += $$PWD/import/inc
+DEPENDPATH += $$PWD/import/inc
+
+win32:!win32-g++: PRE_TARGETDEPS += $$PWD/import/libs/libusb-1.0.lib
+else:win32-g++: PRE_TARGETDEPS += $$PWD/import/libs/libusb-1.0.a

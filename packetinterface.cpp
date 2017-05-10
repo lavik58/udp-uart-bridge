@@ -69,88 +69,10 @@ PacketInterface::PacketInterface(QObject *parent) :
 
     connect(mTimer, SIGNAL(timeout()), this, SLOT(timerSlot()));
 }
-
-void PacketInterface::processData(QByteArray &data)
+void PacketInterface::forwardRawData(QByteArray &data)
 {
-    unsigned char rx_data;
-    const int rx_timeout = 50;
-
-    for(int i = 0;i < data.length();i++) {
-        rx_data = data[i];
-
-        switch (mRxState) {
-        case 0:
-            if (rx_data == 2) {
-                mRxState += 2;
-                mRxTimer = rx_timeout;
-                mRxDataPtr = 0;
-                mPayloadLength = 0;
-            } else if (rx_data == 3) {
-                mRxState++;
-                mRxTimer = rx_timeout;
-                mRxDataPtr = 0;
-                mPayloadLength = 0;
-            } else {
-                mRxState = 0;
-            }
-            break;
-
-        case 1:
-            mPayloadLength = (unsigned int)rx_data << 8;
-            mRxState++;
-            mRxTimer = rx_timeout;
-            break;
-
-        case 2:
-            mPayloadLength |= (unsigned int)rx_data;
-            if (mPayloadLength <= mMaxBufferLen) {
-                mRxState++;
-                mRxTimer = rx_timeout;
-            } else {
-                mRxState = 0;
-            }
-            break;
-
-        case 3:
-            mRxBuffer[mRxDataPtr++] = rx_data;
-            if (mRxDataPtr == mPayloadLength) {
-                mRxState++;
-            }
-            mRxTimer = rx_timeout;
-            break;
-
-        case 4:
-            mCrcHigh = rx_data;
-            mRxState++;
-            mRxTimer = rx_timeout;
-            break;
-
-        case 5:
-            mCrcLow = rx_data;
-            mRxState++;
-            mRxTimer = rx_timeout;
-            break;
-
-        case 6:
-            if (rx_data == 3) {
-                if (crc16(mRxBuffer, mPayloadLength) ==
-                        ((unsigned short)mCrcHigh << 8 | (unsigned short)mCrcLow)) {
-                    // Packet received!
-                    QByteArray packet = QByteArray::fromRawData((char*)mRxBuffer, mPayloadLength);
-                    emit packetReceived(packet);
-                }
-            }
-
-            mRxState = 0;
-            break;
-
-        default:
-            mRxState = 0;
-            break;
-        }
-    }
+    emit packetReceived(data);
 }
-
 void PacketInterface::timerSlot()
 {
     if (mRxTimer) {

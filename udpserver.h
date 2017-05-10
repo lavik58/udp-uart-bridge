@@ -21,7 +21,8 @@
 #include <QObject>
 #include <QUdpSocket>
 #include <QTimer>
-#include "serialport.h"
+#include <QtSerialPort/QtSerialPort>
+
 #include "packetinterface.h"
 
 class UdpServer : public QObject
@@ -38,14 +39,17 @@ signals:
 public slots:
     void readPendingDatagrams();
     void serialDataAvilable();
-    void serialPortError(int e);
+    void serialPortError( QSerialPort::SerialPortError error );
     void timerSlot();
     void processPacket(QByteArray data);
     void packetDataToSend(QByteArray &data);
 
 private:
+    bool openSerialWithDefaults(void);
+
+
     QUdpSocket *mUdpSocket;
-    SerialPort *mSerialPort;
+    QSerialPort *mSerialPort;
     PacketInterface *mPacketInterface;
     QTimer *mTimer;
     QHostAddress mLastHostAddress;
